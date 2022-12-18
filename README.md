@@ -52,6 +52,11 @@ cd pydash
 source venv/bin/activate
 ```
 
+* If you are on windows, use the following command in powershell to activate the python virtual enviroment.
+```
+.\venv\Scripts\activate.ps1
+```
+
 * Now, you need to install the dependency libraries used by pyDash.
 ```
 pip3 install -r requirements.txt
