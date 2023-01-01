@@ -31,7 +31,7 @@ There are a few ways for you to set your development environment. In this sectio
 * The first step is to do the checkout of the pyDash source code. You should have git software installed on your operating system. Using a terminal, do the pyDash source code repository clone operation.
 
 ```
-git clone https://github.com/mfcaetano/pydash.git
+git clone https://github.com/Feneco/Projeto-de-programaco-MPEG-DASH
 ```
 
 If you are doing a Computer Networking class at the Department of Computer Science at the UnB, we strongly suggest that you should clone the repository instead of just downloading it. Source code updates could be available and new functionalities released during the current semester.
