@@ -29,7 +29,7 @@ class QConfig():
 
 
 
-class ConnectionInfo:
+class EnvironmentState:
     """
     Stores the conInfo variables.
     """
@@ -48,9 +48,9 @@ class ConnectionInfo:
 
 
 class Rewards:
-    def __init__(self, config:QConfig):
-        self.config = config
-        self.conInfo = None
+    def __init__(self, qConfig:QConfig):
+        self.qConfig = qConfig
+        self.envState = None
 
         self._lastQualityLevel = 0
         self._lastBufferFilling = 0
@@ -61,8 +61,8 @@ class Rewards:
         """
         Equation (2)
         """
-        r = ((self.conInfo.qualityLevel    - 1)
-            /(self.conInfo.maxQualityLevel - 1)) * 2 - 1
+        r = ((self.envState.qualityLevel    - 1)
+            /(self.envState.maxQualityLevel - 1)) * 2 - 1
         return r
     
 
@@ -70,9 +70,9 @@ class Rewards:
         """
         Equation (3)
         """
-        OLi   = self.conInfo.oscillationLength
-        OLmax = self.config.maxOscillationLength
-        ODi   = self.conInfo.oscillationDepth
+        OLi   = self.envState.oscillationLength
+        OLmax = self.qConfig.maxOscillationLength
+        ODi   = self.envState.oscillationDepth
         if (OLi == 0):
             return 0
         else:
@@ -86,11 +86,11 @@ class Rewards:
         """
         Equation (4)
         """
-        if (self.conInfo.bufferFilling <= ( 0.1 * self.conInfo.maxBufferLength )):
+        if (self.envState.bufferFilling <= ( 0.1 * self.envState.maxBufferLength )):
             r = -1.0
         else: # bufferHealth > 0.1 * maxBufferSize
-            r = ((2 * self.conInfo.bufferFilling)
-                /((1 - 0.1) * self.conInfo.maxBufferLength))
+            r = ((2 * self.envState.bufferFilling)
+                /((1 - 0.1) * self.envState.maxBufferLength))
             r -= ((1 + 0.1) 
                   /(1 - 0.1))
         return r
@@ -100,27 +100,27 @@ class Rewards:
         """
         Equation (5)
         """
-        if self.conInfo.bufferFilling <= self._lastBufferFilling:
-            r = ((self.conInfo.bufferFilling - self._lastBufferFilling)
+        if self.envState.bufferFilling <= self._lastBufferFilling:
+            r = ((self.envState.bufferFilling - self._lastBufferFilling)
                 /(self._lastBufferFilling))
         else: # self.conInfo.bufferFilling > self.lastBufferHealth
-            r = ((self.conInfo.bufferFilling - self._lastBufferFilling)
-                /(self.conInfo.bufferFilling - (self._lastBufferFilling // 2)))
+            r = ((self.envState.bufferFilling - self._lastBufferFilling)
+                /(self.envState.bufferFilling - (self._lastBufferFilling // 2)))
         return r
 
 
-    def getReward(self, connectionInfo:ConnectionInfo) -> float:
+    def getReward(self, envState:EnvironmentState) -> float:
         """
         Get reward given the parameters. self.rewardWeight Dictionary values can be changed to
         tune this method.
         """
-        self.conInfo = connectionInfo
-        r =  self.config.weightQuality       * self.rewardQuality      ()
-        r += self.config.weightOscillation   * self.rewardOscillation  ()
-        r += self.config.weightBufferFilling * self.rewardBufferFilling()
-        r += self.config.weightBufferChange  * self.rewardBufferChange ()
-        self._lastBufferFilling = self.conInfo.bufferFilling
-        self._lastQualityLevel  = self.conInfo.qualityLevel
+        self.envState = envState
+        r =  self.qConfig.weightQuality       * self.rewardQuality      ()
+        r += self.qConfig.weightOscillation   * self.rewardOscillation  ()
+        r += self.qConfig.weightBufferFilling * self.rewardBufferFilling()
+        r += self.qConfig.weightBufferChange  * self.rewardBufferChange ()
+        self._lastBufferFilling = self.envState.bufferFilling
+        self._lastQualityLevel  = self.envState.qualityLevel
         
     
     # def updateQTable(self):
@@ -147,18 +147,20 @@ class Q:
         self.lastState = 0
 
 
-    def calculate_last_reward(self, environmentState:ConnectionInfo):
+    def calculate_last_reward(self, environmentState:EnvironmentState):
         """
         Equation (1)
         """
-        r = self.rewardFunction.getReward(environmentState)
+        # The environmentState variable will be updated only after self.select_action is called, 
+        # so it makes sense to update the Q table of the last state/action combination 
+        r = self.rewardFunction.getReward(environmentState) 
         qOldVal = self.q[self.lastState, self.lastActionSelection]
         qValMax = np.max(self.q[self.lastState,:])
         qNewVal = qOldVal + self.qConfig.learningRate * ( r + self.qConfig.discountRate * qValMax - qOldVal )
         self.q[self.lastState, self.lastActionSelection] = qNewVal
 
 
-    def get_action(self, environmentState:ConnectionInfo) -> int:
+    def get_action(self, environmentState:EnvironmentState) -> int:
         if self.iteration == 0:
             # First choice is going to be 0
             return 0
@@ -175,7 +177,7 @@ class Q:
             return np.random.choice(self.nActions, p=p)
 
 
-    def select_action(self, environmentState:ConnectionInfo) -> int:
+    def select_action(self, environmentState:EnvironmentState) -> int:
         self.calculate_last_reward()
         action = self.get_action(environmentState)
         self.lastState = environmentState.qualityLevel
@@ -192,7 +194,7 @@ class R2A_Q(IR2A):
         IR2A.__init__(self, id)
         self.bitrates = []
         self.qConfig = QConfig()
-        self.environmentState = ConnectionInfo()
+        self.environmentState = EnvironmentState()
         self.rewardHandler = Rewards(self.qConfig)
         self.q = None # initialized in self.handle_xml_response
 
