@@ -1,0 +1,12 @@
+{
+    "Reward Weights": { 
+        "Quality": 0.1,
+        "Oscillation": 0.1,
+        "Buffer Filling": 0.1, 
+        "Buffer Change": 0.1 
+    },
+    "Max Oscillation Length": 20,
+    "Learning Rate": 0.1,
+    "Discount Rate": 0.1,
+    "Learning Phase Length": 15
+}
