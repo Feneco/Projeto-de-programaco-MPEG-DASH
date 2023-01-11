@@ -152,11 +152,15 @@ class Q:
         Equation (1)
         """
         # The environmentState variable will be updated only after self.select_action is called, 
-        # so it makes sense to update the Q table of the last state/action combination 
+        # so it makes sense to update the Q table of the last state/action combination.
+        # 
+        # The first time this method runs, it will not have valid data to calculate stuff
+        if self.iteration == 0:
+            return
         r = self.rewardFunction.getReward(environmentState) 
         qOldVal = self.q[self.lastState, self.lastActionSelection]
-        qValMax = np.max(self.q[self.lastState,:])
-        qNewVal = qOldVal + self.qConfig.learningRate * ( r + self.qConfig.discountRate * qValMax - qOldVal )
+        qNewVal = qOldVal + self.qConfig.learningRate \
+            * ( r + self.qConfig.discountRate * np.max(self.q[self.lastState,:]) - qOldVal )
         self.q[self.lastState, self.lastActionSelection] = qNewVal
 
 
@@ -179,11 +183,11 @@ class Q:
 
     def select_action(self, environmentState:EnvironmentState) -> int:
         self.calculate_last_reward()
-        action = self.get_action(environmentState)
+        chosenAction = self.get_action(environmentState)
         self.lastState = environmentState.qualityLevel
-        self.lastActionSelection = action
+        self.lastActionSelection = chosenAction
         self.iteration += 1
-        return action
+        return chosenAction
        
 
 
@@ -226,7 +230,7 @@ class R2A_Q(IR2A):
 
 
     def handle_segment_size_request(self, msg):
-        # TODO: update self.environmentState before proceeding with functions below
+        self.updateEnvState()
         nextQualityLevel = self.q.select_action(self.environmentState)
         msg.add_quality_id(self.bitrates[nextQualityLevel])
         self.environmentState.qualityLevel = nextQualityLevel
@@ -242,4 +246,8 @@ class R2A_Q(IR2A):
 
 
     def finalization(self):
+        pass
+
+    def updateEnvState(self):
+        # TODO: update self.environmentState before proceeding with functions below
         pass
