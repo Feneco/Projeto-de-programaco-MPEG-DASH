@@ -232,7 +232,7 @@ class R2A_Q(IR2A):
         # * maxBufferLength
         # TODO: Find a way to get maxBandwidth
         self.environmentState.maxQualityLevel = len(self.bitrates)
-        self.environmentState.maxBandwidth = 10000 # 10 kbps, for now
+        self.environmentState.maxBandwidth = 10000 # 10 kbps, for now. It's not being used, yet.
         with open('dash_client.json') as f:
             # This file is already open in another class, we could optimize if we could
             # reach it from here.
