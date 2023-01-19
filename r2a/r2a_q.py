@@ -268,8 +268,7 @@ class R2A_Q(IR2A):
         pass
 
     def updateEnvState(self):
-        # TODO: update self.environmentState before proceeding with functions below
-        # This function should update the following values:
+        # TODO: This function should update the following values:
         # * bufferFilling
         # * bufferFillingChange
         # * qualityLevel < This one is already updated in self.handle_segment_size_request() but we could update it here too
