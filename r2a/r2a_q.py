@@ -288,6 +288,12 @@ class R2A_Q(IR2A):
         # * oscillationDepth
 
         # Buffer Variables
+        self.getBuffer()
+        # Oscillation Calculation
+        self.getOscillation(self.qualityHistory)
+
+
+    def getBuffer(self):
         buffer = self.whiteboard.get_playback_buffer_size()
         thisBufferFill = 0
         if len(buffer) > 0:
@@ -296,17 +302,18 @@ class R2A_Q(IR2A):
         self.environmentState.bufferFilling = thisBufferFill
         self.environmentState.bufferFillingChange = thisBufferFill - lastBufferFill
 
-        # Oscillation Calculation
+
+    def getOscillation(self, l):
         oscillationStartIndex = 0
-        for i in range(len(self.qualityHistory)-1):
-            if self.qualityHistory[i] > self.qualityHistory[i+1]:
+        for i in range(len(l)-1):
+            if l[i] > l[i+1]:
                 oscillationStartIndex = i
                 break
-        if len(self.qualityHistory) > 0:
-            oscillationStartValue = self.qualityHistory[oscillationStartIndex]
-            if self.qualityHistory[-1] >= oscillationStartValue:
+        if len(l) > 0:
+            oscillationStartValue = l[oscillationStartIndex]
+            if l[-1] >= oscillationStartValue:
                 self.environmentState.oscillationLength = 0;
                 self.environmentState.oscillationDepth  = 0;
             else:
                 self.environmentState.oscillationLength = self.qConfig.maxOscillationLength - oscillationStartIndex
-                self.environmentState.oscillationDepth  = oscillationStartValue - self.qualityHistory[-1]
+                self.environmentState.oscillationDepth  = oscillationStartValue - l[-1]
