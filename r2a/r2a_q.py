@@ -134,6 +134,7 @@ class Rewards:
         r += self.qConfig.weightBufferChange  * self.rewardBufferChange ()
         self._lastBufferFilling = self.envState.bufferFilling
         self._lastQualityLevel  = self.envState.qualityLevel
+        return r
 
 
 
@@ -179,18 +180,21 @@ class Q:
         elif self.iteration < self.qConfig.learningPhaseLength:
             # In the beginning the agent must learn, it will
             # pick truly at random
-            return np.random.choice(self.nActions, 1)
+            return np.random.choice(self.nActions, 1)[0]
         else:
             # After that, actions with greater rewards will
             # be picked far more
             s = environmentState.qualityLevel
-            p = np.square(q[s,:])
-            p = np.divide(p, np.sum(p))
+            p = np.square(self.q[s,:])
+            s = np.sum(p)
+            if s == 0:
+                s = 1
+            p = np.divide(p, s)
             return np.random.choice(self.nActions, p=p)
 
 
     def select_action(self, environmentState:EnvironmentState) -> int:
-        self.calculate_last_reward()
+        self.calculate_last_reward(environmentState)
         chosenAction = self._get_action(environmentState)
         self.lastState = environmentState.qualityLevel
         self.lastActionSelection = chosenAction
@@ -204,8 +208,8 @@ class Q:
 class R2A_Q(IR2A):
     def __init__(self, id):
         IR2A.__init__(self, id)
-        # List with the bitrates available. Only the Quantity
-        # and Index of bitrates are used instead of the actual values
+        # List with the bitrates available. Only the amount
+        # and Index of bitrates are used instead of the actual kbps values
         self.bitrates = []
         # Load the Q specific configuration
         self.qConfig = QConfig()
@@ -215,6 +219,8 @@ class R2A_Q(IR2A):
         self.rewardHandler = Rewards(self.qConfig)
         # The q agent is only initialized in self.handle_xml_response
         self.q = None
+        # History of qualities levels chosen. Used to calculate oscillation variables
+        self.qualityHistory = []
 
 
     def handle_xml_request(self, msg):
@@ -238,9 +244,10 @@ class R2A_Q(IR2A):
             # reach it from here.
             config_parameters = json.load(f)
             self.environmentState.maxBufferLength = int(config_parameters["max_buffer_size"])
-
+        
         # Initializing Q agent
-        self.q = Q(N, N, self.rewardHandler, self.qConfig)
+        self.q = Q(self.environmentState.maxQualityLevel, self.environmentState.maxQualityLevel,
+                   self.rewardHandler, self.qConfig)
 
         self.send_up(msg)
 
@@ -254,6 +261,10 @@ class R2A_Q(IR2A):
         msg.add_quality_id(self.bitrates[nextQualityLevel])
         self.environmentState.qualityLevel = nextQualityLevel # update self.environmentState
         self.send_down(msg)
+        
+        self.qualityHistory.append(nextQualityLevel)
+        if len(self.qualityHistory) > self.qConfig.maxOscillationLength:
+            self.qualityHistory.pop(0)
 
 
     def handle_segment_size_response(self, msg):
@@ -272,7 +283,30 @@ class R2A_Q(IR2A):
         # * bufferFilling
         # * bufferFillingChange
         # * qualityLevel < This one is already updated in self.handle_segment_size_request() but we could update it here too
-        # * bandwidth
+        # * bandwidth < probably can be calculated using self.handle_segment_size_response() and calculating the time it takes to send messages. As it's not being used, it is not a priority.
         # * oscillationLength
         # * oscillationDepth
-        pass
+
+        # Buffer Variables
+        buffer = self.whiteboard.get_playback_buffer_size()
+        thisBufferFill = 0
+        if len(buffer) > 0:
+            thisBufferFill = buffer[-1][1] # get the last segment buffer length
+        lastBufferFill = self.environmentState.bufferFilling
+        self.environmentState.bufferFilling = thisBufferFill
+        self.environmentState.bufferFillingChange = thisBufferFill - lastBufferFill
+
+        # Oscillation Calculation
+        oscillationStartIndex = 0
+        for i in range(len(self.qualityHistory)-1):
+            if self.qualityHistory[i] > self.qualityHistory[i+1]:
+                oscillationStartIndex = i
+                break
+        if len(self.qualityHistory) > 0:
+            oscillationStartValue = self.qualityHistory[oscillationStartIndex]
+            if self.qualityHistory[-1] >= oscillationStartValue:
+                self.environmentState.oscillationLength = 0;
+                self.environmentState.oscillationDepth  = 0;
+            else:
+                self.environmentState.oscillationLength = self.qConfig.maxOscillationLength - oscillationStartIndex
+                self.environmentState.oscillationDepth  = oscillationStartValue - self.qualityHistory[-1]

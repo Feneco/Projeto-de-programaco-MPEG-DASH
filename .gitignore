@@ -8,3 +8,6 @@ r2a/r2afdash.py
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Vscode specific files
+.vscode/
