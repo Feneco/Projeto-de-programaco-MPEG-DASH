@@ -29,6 +29,9 @@ class QConfig():
             self.maxOscillationLength = q_config_parameters["Max Oscillation Length" ]
             self.learningPhaseLength  = q_config_parameters["Learning Phase Length"  ]
 
+            self.inverseSensitivity   = q_config_parameters["Inverse sensitivity"    ]
+            self.temperature          = q_config_parameters["Temperature"            ]
+
             r_weights = q_config_parameters["Reward Weights"]
             self.weightQuality       = r_weights["Quality"       ]
             self.weightOscillation   = r_weights["Oscillation"   ]
@@ -150,6 +153,10 @@ class Q:
         self.lastActionSelection = 0
         self.lastState = 0
 
+        self.explorationProbability = 1
+        self.actionInfluence = 1/nActions
+        self.qLearning = 0
+
 
     def calculate_last_reward(self, environmentState:EnvironmentState):
         """
@@ -165,8 +172,9 @@ class Q:
         
         r = self.rewardFunction.getReward(environmentState)
         qOldVal = self.q[self.lastState, self.lastActionSelection]
+        self.qLearning = ( r + self.qConfig.discountRate * np.max(self.q[self.lastState,:]) - qOldVal )
         qNewVal = qOldVal + self.qConfig.learningRate \
-            * ( r + self.qConfig.discountRate * np.max(self.q[self.lastState,:]) - qOldVal )
+            * self.qLearning
         self.q[self.lastState, self.lastActionSelection] = qNewVal
 
 
@@ -174,33 +182,56 @@ class Q:
         # The actual Learn/Use_knowledge decision is made here.
         # For now it's just a simple algorithm that i made that will still apply some 
         # randomness in the choice after some iterations
+        s = environmentState.qualityLevel
+        E = np.random.uniform(0, 1)
+
         if self.iteration == 0:
             # First choice is going to be 0
             return 0
-        elif self.iteration < self.qConfig.learningPhaseLength:
-            # In the beginning the agent must learn, it will
-            # pick truly at random
-            return np.random.choice(self.nActions, 1)[0]
-        else:
-            # After that, actions with greater rewards will
-            # be picked far more
-            s = environmentState.qualityLevel
-            p = np.square(self.q[s,:])
-            s = np.sum(p)
-            if s == 0:
-                s = 1
-            p = np.divide(p, s)
-            return np.random.choice(self.nActions, p=p)
+
+        if E < self.explorationProbability:
+            # softmax(nActions)
+            actions = (self.q[s, :]/self.qConfig.temperature)
+            e_x = np.exp(actions - np.max(actions))
+            softmax = e_x / e_x.sum()
+            return np.random.choice(self.nActions, 1, p=softmax)[0]
+
+        # argmax(Q(s,b))
+        return np.max(self.q[s, :])
+
+        # if self.iteration == 0:
+        #     # First choice is going to be 0
+        #     return 0
+        # elif self.iteration < self.qConfig.learningPhaseLength:
+        #     # In the beginning the agent must learn, it will
+        #     # pick truly at random
+        #     return np.random.choice(self.nActions, 1)[0]
+        # else:
+        #     # After that, actions with greater rewards will
+        #     # be picked far more
+        #     s = environmentState.qualityLevel
+        #     p = np.square(self.q[s,:])
+        #     s = np.sum(p)
+        #     if s == 0:
+        #         s = 1
+        #     p = np.divide(p, s)
+        #     return np.random.choice(self.nActions, p=p)
 
 
     def select_action(self, environmentState:EnvironmentState) -> int:
+        self.update_exploration_probability(self.lastState)
         self.calculate_last_reward(environmentState)
         chosenAction = self._get_action(environmentState)
+
+
+
         self.lastState = environmentState.qualityLevel
         self.lastActionSelection = chosenAction
         self.iteration += 1
         return chosenAction
 
+    def update_exploration_probability(self, lastState:int):
+        self.explorationProbability = self.actionInfluence * (1-(np.exp(-abs(self.qConfig.learningRate * self.qLearning)/self.qConfig.inverseSensitivity))/1+(np.exp(-abs(self.qConfig.learningRate * self.qLearning)/self.qConfig.inverseSensitivity))) + (1 - self.actionInfluence) * self.explorationProbability
 
 
 #########################################################################################################
