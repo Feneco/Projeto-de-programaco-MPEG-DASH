@@ -3,6 +3,7 @@
 
 
 @author: Wagner C.C. Batalha (wagnerweb2010@gmail.com) 2023
+@author: Lucas Ramson (lucasramson@gmail.com) 2023
 
 @description: Based on the article with the same name as the title. By using a
 Q learning algorithm, we may be able to choose the best bitrate of a video
@@ -16,7 +17,6 @@ from player.parser import *
 from r2a.ir2a import IR2A
 import numpy as np
 import json
-from render import RenderHeatMap
 
 
 class QConfig():
@@ -214,7 +214,6 @@ class Q:
 class R2A_Q(IR2A):
     def __init__(self, id):
         IR2A.__init__(self, id)
-        self.r = RenderHeatMap()
         # List with the bitrates available. Only the amount
         # and Index of bitrates are used instead of the actual kbps values
         self.bitrates = []
@@ -284,7 +283,6 @@ class R2A_Q(IR2A):
         self.qualityHistory.append(nextQualityLevel)
         if len(self.qualityHistory) > self.qConfig.maxOscillationLength:
             self.qualityHistory.pop(0)
-        self.r.renderframe(self.q.q)
 
 
     def handle_segment_size_response(self, msg):
