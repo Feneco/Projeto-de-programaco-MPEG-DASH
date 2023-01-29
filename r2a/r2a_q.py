@@ -322,8 +322,8 @@ class R2A_Q(IR2A):
         if len(l) > 0:
             oscillationStartValue = l[oscillationStartIndex]
             if l[-1] >= oscillationStartValue:
-                self.environmentState.oscillationLength = 0;
-                self.environmentState.oscillationDepth  = 0;
+                self.environmentState.oscillationLength = 0
+                self.environmentState.oscillationDepth  = 0
             else:
                 self.environmentState.oscillationLength = self.qConfig.maxOscillationLength - oscillationStartIndex
                 self.environmentState.oscillationDepth  = oscillationStartValue - l[-1]
