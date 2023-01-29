@@ -12,4 +12,5 @@ class RenderHeatMap:
         ax = sns.heatmap(q)
         fig = ax.get_figure()
         fig.savefig(f"rendered_animation/{self.frame:03d}.png")
+        fig.clear()
         self.frame += 1
