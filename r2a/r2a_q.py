@@ -27,10 +27,8 @@ class QConfig():
             self.learningRate         = q_config_parameters["Learning Rate"          ]
             self.discountRate         = q_config_parameters["Discount Rate"          ]
             self.maxOscillationLength = q_config_parameters["Max Oscillation Length" ]
-            self.learningPhaseLength  = q_config_parameters["Learning Phase Length"  ]
 
             self.inverseSensitivity   = q_config_parameters["Inverse sensitivity"    ]
-            self.temperature          = q_config_parameters["Temperature"            ]
 
             r_weights = q_config_parameters["Reward Weights"]
             self.weightQuality       = r_weights["Quality"       ]
@@ -255,7 +253,7 @@ class R2A_Q(IR2A):
             self.environmentState.maxBufferLength = int(config_parameters["max_buffer_size"])
         
         # Initializing Q agent
-        self.q = Q(self.environmentState.maxQualityLevel, self.environmentState.maxQualityLevel,
+        self.q = Q(self.environmentState.maxQualityLevel, 4,
                    self.rewardHandler, self.qConfig)
 
         self.send_up(msg)
@@ -266,7 +264,19 @@ class R2A_Q(IR2A):
         # then we get the quality level from the agent
         # after that we send it down
         self.updateEnvState()
-        nextQualityLevel = self.q.select_action(self.environmentState)
+        choosenaction = self.q.select_action(self.environmentState)
+        nextQualityLevel = self.environmentState.qualityLevel
+        
+        if   choosenaction == 0:
+            nextQualityLevel -= 4
+        elif choosenaction == 1:
+            nextQualityLevel -= 2
+        elif choosenaction == 2:
+            nextQualityLevel += 0
+        elif choosenaction == 3:
+            nextQualityLevel += 1
+        nextQualityLevel = max(0, min(nextQualityLevel, self.environmentState.maxQualityLevel-1))
+
         msg.add_quality_id(self.bitrates[nextQualityLevel])
         self.environmentState.qualityLevel = nextQualityLevel # update self.environmentState
         self.send_down(msg)
