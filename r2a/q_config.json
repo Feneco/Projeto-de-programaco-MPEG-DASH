@@ -1,14 +1,12 @@
 {
     "Reward Weights": { 
-        "Quality": 0.4,
-        "Oscillation": 0.8,
-        "Buffer Filling": 0.2, 
-        "Buffer Change": 0.3 
+        "Quality": 2,
+        "Oscillation": 1,
+        "Buffer Filling": 4,
+        "Buffer Change": 3
     },
     "Max Oscillation Length": 32,
-    "Learning Rate": 0.8,
+    "Learning Rate": 0.5,
     "Discount Rate": 0.9,
-    "Learning Phase Length": 40,
-    "Inverse sensitivity": 50,
-    "Temperature": 1
+    "Inverse sensitivity": 50
 }

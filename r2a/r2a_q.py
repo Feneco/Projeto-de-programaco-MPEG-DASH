@@ -153,7 +153,7 @@ class Q:
         self.lastActionSelection = 0
         self.lastState = 0
 
-        self.explorationProbability = 1
+        self.explorationProbability = np.ones([nStates])
         self.actionInfluence = 1/nActions
         self.qLearning = 0
 
@@ -172,7 +172,7 @@ class Q:
         
         r = self.rewardFunction.getReward(environmentState)
         qOldVal = self.q[self.lastState, self.lastActionSelection]
-        self.qLearning = ( r + self.qConfig.discountRate * np.max(self.q[self.lastState,:]) - qOldVal )
+        self.qLearning = ( r + self.qConfig.discountRate * np.max(self.q[environmentState.qualityLevel,:]) - qOldVal ) #alterei aqui, tava self.q[self.lastState, :]
         qNewVal = qOldVal + self.qConfig.learningRate * self.qLearning
         self.q[self.lastState, self.lastActionSelection] = qNewVal
 
@@ -184,33 +184,31 @@ class Q:
         s = environmentState.qualityLevel
         E = np.random.uniform(0, 1)
 
-        if self.iteration == 0:
-            # First choice is going to be 0
-            return 0
-
-        if E < self.explorationProbability:
+        if E < self.explorationProbability[s]:
             # softmax(nActions)
-            actions = (self.q[s, :]/self.qConfig.temperature)
+            actions = (self.q[s, :])
             e_x = np.exp(actions - np.max(actions))
             softmax = e_x / e_x.sum()
             return np.random.choice(self.nActions, 1, p=softmax)[0]
 
         # argmax(Q(s,b))
-        return np.max(self.q[s, :])
+        print("no exploration: ", np.argmax(self.q[s, :]))
+        return int(np.argmax(self.q[s, :]))
 
 
     def select_action(self, environmentState:EnvironmentState) -> int:
-        self.update_exploration_probability(self.lastState)
         self.calculate_last_reward(environmentState)
         chosenAction = self._get_action(environmentState)
-
+        self.update_exploration_probability(environmentState)
         self.lastState = environmentState.qualityLevel
         self.lastActionSelection = chosenAction
         self.iteration += 1
         return chosenAction
 
-    def update_exploration_probability(self, lastState:int):
-        self.explorationProbability = self.actionInfluence * (1-(np.exp(-abs(self.qConfig.learningRate * self.qLearning)/self.qConfig.inverseSensitivity))/1+(np.exp(-abs(self.qConfig.learningRate * self.qLearning)/self.qConfig.inverseSensitivity))) + (1 - self.actionInfluence) * self.explorationProbability
+    def update_exploration_probability(self, environmentState:EnvironmentState):
+            #maior mudança foi aqui, tinha feito errado, (antes) basicamente calculando a probabilidade como se fosse uma só pra todos, e não uma pra cada estado.
+        xd = np.exp(-(abs(self.qConfig.learningRate * self.qLearning) / self.qConfig.inverseSensitivity))
+        self.explorationProbability[environmentState.qualityLevel] = self.actionInfluence * ((1 - xd) / (1 + xd)) + (1 - self.actionInfluence) * self.explorationProbability[environmentState.qualityLevel]
 
 
 #########################################################################################################
