@@ -199,24 +199,6 @@ class Q:
         # argmax(Q(s,b))
         return np.max(self.q[s, :])
 
-        # if self.iteration == 0:
-        #     # First choice is going to be 0
-        #     return 0
-        # elif self.iteration < self.qConfig.learningPhaseLength:
-        #     # In the beginning the agent must learn, it will
-        #     # pick truly at random
-        #     return np.random.choice(self.nActions, 1)[0]
-        # else:
-        #     # After that, actions with greater rewards will
-        #     # be picked far more
-        #     s = environmentState.qualityLevel
-        #     p = np.square(self.q[s,:])
-        #     s = np.sum(p)
-        #     if s == 0:
-        #         s = 1
-        #     p = np.divide(p, s)
-        #     return np.random.choice(self.nActions, p=p)
-
 
     def select_action(self, environmentState:EnvironmentState) -> int:
         self.update_exploration_probability(self.lastState)
